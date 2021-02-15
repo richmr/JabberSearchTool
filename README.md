@@ -60,7 +60,7 @@ The tool has a few basic searches it can do:
 - `show users` - Get a list of all valid users in archive.  
   - Usernames generally take the form of their username@domain.  But if you are having issues, dump this list of users and search through it
 - `show chatrooms` - Get a list of all group chat rooms in the archive
-  - Chatrooms have very odd names like: io393961768317683@conference-3-standaloneclusterff6b8.domain
+  - Chatrooms have very odd names like: `io393961768317683@conference-3-standaloneclusterff6b8.domain`
   - You need the full name to search for it
 - `get recipients [username or chatroom]` - Get a list of the recipients a user sent to, or all users in a chatroom.  Examples:
   - `get recipients user@domain`
