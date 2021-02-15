@@ -85,7 +85,7 @@ The tool has a few basic searches it can do:
 - `--IV iv`: Hex encoded AES-256 IV from Jabber settings.  
 - `--ODBCConnectionString string`: Valid pyodbc connection string to the Jabber archive server.  This is an "optional" argument only because the version I use of this command at work has the correct one for my environment hard coded in to the tool.  JabberSearchTool will not work without this argument
 - `--tableName tablename`: Table name with the Jabber archive.  “jm” is used by default
-  - *Warning: This parameter can result in direct SQL injection.  If this is controlled by a non-trusted user (i.e. not you) then you must sanitize this parameter.*
+  - *Warning: This parameter can result in direct SQL injection.  If this is controlled by a non-trusted user (i.e. not you) then you must sanitize this parameter.  Don't @ me.  It turns out you can't easily parameterize table names in pyodbc*
 - `-i`, `--interactive`: If set, will open an interactive prompt to send additional commands
 - `-t tz`, `--timezone tz`: Set to valid pytz timezone to display message times in the chosen time zone.  Defaults to 'America/Los_Angeles'
 - `-o [text/html]`, `--outputType [text/html]`: choices are "text" or "html", sets the output type for chat log files (if no --outputFilename is specified, will print to stdout in text)
@@ -97,8 +97,8 @@ The tool has a few basic searches it can do:
 # Example session
 (commands start with **** for readability):
 ```
-**** (base) C:\Users\user\Documents\tech\jabber>python JabberSearchTool.py --interactive get chatrooms user@domain
- Processing command get chatrooms user@domain
+**** (base) C:\Users\user\Documents\tech\jabber>python JabberSearchTool.py --interactive get chatrooms user1@domain
+ Processing command get chatrooms user1@domain
  chat415421941519415@conference-3-standaloneclusterff6b8.domain
  itleadershipmanagement3171976819768@conference-3-standaloneclusterff6b8.domain
  io393961768317683@conference-3-standaloneclusterff6b8.domain
@@ -141,7 +141,7 @@ The tool has a few basic searches it can do:
 ```
 These were all delivered at exactly the same time, which means they were actually resent to someone who re-signed back in to the chat room.  This is difficult to filter out, but if you see a lot of messages sent at the same time, then they are repeats.
 
-Also, sometimes chats are sent with no message.  That shows up as “NO DATA” in the log
+Also, chats are sometimes sent with no message.  I believe they are "meta-chats" with data for the Jabber service.  That shows up as “NO DATA” in the log
 
 The tool cannot reproduce screenshots or sent files, they are not retained in the database.
 
