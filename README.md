@@ -18,20 +18,20 @@ A quick warning: like all access-privileged IT folks, I have the ability to read
 - Operating system
   - This tool has only been tested on Windows 10 and MS SQL Server
 - Python
- - You will need at least a python 3.7 installation
- - Your python environment will need these packages:
-   - Not always present:
-     - pyodbc
-     - pytz
-     - dateutil
-  - Usually installed by default:
-    - argparse
-    - re
-    - datetime
-    - base64
-    - hashlib
-    - crypto
-    - shlex
+  - You will need at least a python 3.7 installation
+  - Your python environment will need these packages:
+    - Not always present:
+      - pyodbc
+      - pytz
+      - dateutil
+    - Usually installed by default:
+      - argparse
+      - re
+      - datetime
+      - base64
+      - hashlib
+      - crypto
+      - shlex
   - The Anaconda installation for Windows had all of these packages by default
 - The toolset
   - Because I am too lazy to make a pip installer, make sure jabberArchiveTools.py and JabberSearchTool.py are in the same directory
