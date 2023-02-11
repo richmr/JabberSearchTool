@@ -7,7 +7,6 @@ formatter = logging.Formatter('%(name)s:%(levelname)s:%(message)s')
 ch.setFormatter(formatter)
 logger.addHandler(ch)
 
-from jabberArchiveTools import jabberArchiveTools
 import argparse
 import pyodbc
 import re
@@ -16,6 +15,9 @@ import pytz
 from dateutil.tz import tz
 import shlex
 import sys
+
+from jabberArchiveTools import jabberArchiveTools
+from jabberSearchSecrets import key, IV, ODBC
 
 """
 Functions:
@@ -43,19 +45,19 @@ Options
     --row_warning_threshold
 """
 
-defaultODBC = "DRIVER={ODBC Driver 17 for SQL Server};SERVER=localhost\SQLEXPRESS;DATABASE=imarchive;Trusted_Connection=yes"
-defaultKey = False
-defaultIV = False
+defaultODBC = ODBC
+defaultKey = key
+defaultIV = IV
 defaultTimeZone = 'America/Los_Angeles'
 
-description = 'JabberSearchTool V0.1\n'
-description += 'Michael Rich - Feb 2021\n'
+description = 'JabberSearchTool V0.2\n'
+description += 'Michael Rich - Feb 2023\n'
 description += 'Please use -h to see help!\n'
 
 parser = argparse.ArgumentParser(description=description, formatter_class=argparse.RawTextHelpFormatter)
 
-parser.add_argument("-s", "--startTime", type=str, help="Times must be like 2021-02-19 17:11:00 (YYYY-MM-DD HH:MM:SS)")
-parser.add_argument("-e", "--endTime", type=str,  help="Times must be like 2021-02-19 17:11:00 (YYYY-MM-DD HH:MM:SS)")
+parser.add_argument("-s", "--startTime", type=str, default=None, nargs='+', help="Times must be like 2021-02-19T17:11:00 (YYYY-MM-DDTHH:MM:SS)")
+parser.add_argument("-e", "--endTime", type=str,  default=None, nargs='+', help="Times must be like 2021-02-19T17:11:00 (YYYY-MM-DDTHH:MM:SS)")
 parser.add_argument("--key", type=str, default=defaultKey, help="Hex encoded AES-256 key from Jabber settings")
 parser.add_argument("--IV", type=str, default=defaultIV, help="Hex encoded AES-256 IV from Jabber settings")
 parser.add_argument("--ODBCConnectionString", type=str, default=defaultODBC, help="Valid pyodbc connection string to Jabber archive server")
@@ -139,10 +141,10 @@ def getConversation(re_object, jabberSearchInstance):
     startTime = False
     #logger.debug("s: {}, e: {}".format(args.startTime, args.endTime))
     if args.startTime:
-        startTime = fixTimezoneForSearchParameters(args.startTime)
+        startTime = fixTimezoneForSearchParameters(args.startTime[-1])
     endTime = False
     if args.endTime:
-        endTime = fixTimezoneForSearchParameters(args.endTime)
+        endTime = fixTimezoneForSearchParameters(args.endTime[-1])
     #logger.debug("s: {}, e: {}".format(startTime, endTime))
 
     try:
@@ -171,10 +173,10 @@ def getDiscussion(re_object, jabberSearchInstance):
     startTime = False
     logger.debug("s: {}, e: {}".format(args.startTime, args.endTime))
     if args.startTime:
-        startTime = fixTimezoneForSearchParameters(args.startTime)
+        startTime = fixTimezoneForSearchParameters(args.startTime[-1])
     endTime = False
     if args.endTime:
-        endTime = fixTimezoneForSearchParameters(args.endTime)
+        endTime = fixTimezoneForSearchParameters(args.endTime[-1])
     logger.debug("s: {}, e: {}".format(startTime, endTime))
 
     try:
@@ -203,10 +205,10 @@ def fixTimezoneForSearchParameters(time_in):
     # Jabber archive is in UTC, these search parameters will likely be in the timezone specified in the arguments
     # need to correct them for UTC
     # needed help from: https://github.com/stub42/pytz/issues/12
-    regex = re.compile("^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$")
+    regex = re.compile("^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$")
     if not regex.match(time_in):
-        raise SyntaxError("Times must be like 2021-02-19 17:11:00 (YYYY-MM-DD HH:MM:SS)")
-    time_fmt_str = "%Y-%m-%d %H:%M:%S"
+        raise SyntaxError("Times must be like 2021-02-19T17:11:00 (YYYY-MM-DDTHH:MM:SS)")
+    time_fmt_str = "%Y-%m-%dT%H:%M:%S"
     time_in_dt = datetime.strptime(time_in, time_fmt_str)
     orig_tz = tz.gettz(args.timezone) #pytz.timezone(atz)
     time_in_dt = time_in_dt.replace(tzinfo=orig_tz)
@@ -262,13 +264,22 @@ try:
             print("Unrecognized command '{}'".format(commandString))
             print(command_help)
         if args.interactive:
-            nextcommand = ""
-            nextcommand = input("> ")
-            nextcommand_list = shlex.split(nextcommand)
-            # Need to add interactive back in
-            nextcommand_list.append("-i")
+            existingOptions = ["-i"]
+            if args.startTime is not None:
+                existingOptions.append(f"-s{args.startTime[-1]}")
+            if args.endTime is not None:
+                existingOptions.append(f"-e{args.endTime[-1]}")
             if args.ignore_row_warning:
-                nextcommand_list.append("-I")
+                existingOptions.append("-I")
+            nextcommand = ""
+            print("Options active for next command: "+" ".join(existingOptions))
+            nextcommand = input("> ")
+            nextcommand_list = existingOptions
+            nextcommand_list += shlex.split(nextcommand)
+            # Need to add interactive back in
+           
+            # if args.ignore_row_warning:
+            #     nextcommand_list.append("-I")
         elif args.noPause:
             break
         else:

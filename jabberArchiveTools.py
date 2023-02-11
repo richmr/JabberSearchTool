@@ -136,9 +136,9 @@ class jabberArchiveTools:
         # returns something similar to:
         # sent_date > {ts '2019-12-05 20:00:00'} and  sent_date < {ts '2019-12-05 23:59:00'}
         # since this is user controlled input and this will be directly injectable, we must be strict on format
-        regex = re.compile("^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$")
+        regex = re.compile("^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$")
         if (startTime and not regex.match(startTime)) or (endTime and not regex.match(endTime)):
-            raise SyntaxError("Times must be like 2021-02-19 17:11:00 (YYYY-MM-DD HH:MM:SS)")
+            raise SyntaxError("Times must be like 2021-02-19T17:11:00 (YYYY-MM-DDTHH:MM:SS)")
 
         startClause = ""
         endClause = ""
@@ -148,9 +148,11 @@ class jabberArchiveTools:
             join = " and "
 
         if startTime:
+            startTime = startTime.replace('T', ' ')
             startClause = "sent_date >= {{ts '{}'}}".format(startTime)
 
         if endTime:
+            endTime = endTime.replace('T', ' ')
             endClause = "sent_date <= {{ts '{}'}}".format(endTime)
 
         finalClause = startClause + join + endClause
@@ -461,7 +463,7 @@ class jabberArchiveTools:
             from_jid = msg["from_jid"].split("/")[from_jid_index]
             if not msg_content:
                 msg_content = "NO DATA"
-            if f:
+            if f is not None:
                 f.write("({}) {}: {}\n".format(msg_time.strftime(timefmt), from_jid, msg_content))
             else:
                 print("({}) {}: {}".format(msg_time.strftime(timefmt), from_jid, msg_content))
@@ -471,7 +473,7 @@ class jabberArchiveTools:
 
 
     def makeChatroomDump(self, messages, filename=False, timezone='America/Los_Angeles', timefmt="%Y-%m-%d %H:%M:%S"):
-        self.makeMessageDump(messages, filename=False, timezone='America/Los_Angeles', timefmt="%Y-%m-%d %H:%M:%S", from_jid_index=1)
+        self.makeMessageDump(messages, filename=filename, timezone='America/Los_Angeles', timefmt="%Y-%m-%d %H:%M:%S", from_jid_index=1)
 
     def makeChatLogFile(self, messages, filename, timezone='America/Los_Angeles', timefmt="%Y-%m-%d %H:%M:%S", from_jid_index=0):
         new_tz = pytz.timezone(timezone)
