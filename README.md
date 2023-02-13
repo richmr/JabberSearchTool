@@ -9,11 +9,12 @@ A quick warning: like all access-privileged IT folks, I have the ability to read
 - HR Permission
   - Don’t dig through folks’ messages without permission.
   - This is really to support HR and/or legal actions and not as entertainment
-- DB Permissions
+- ### DB Permissions 
   - You will need READ permission to the IMArchive DB, on whatever server is hosting it
-  - You will need the correct pyodbc string to connect to that DB.  Examples:
+  - You will need the correct pyodbc string to connect to that DB.  Examples: {#odbc}
     - Windows AD connected authentication: `DRIVER={ODBC Driver 17 for SQL Server};SERVER=jabberDBServer;DATABASE=imarchive;Trusted_Connection=yes`
     - SQL-Native accounts: `DRIVER={ODBC Driver 17 for SQL Server};SERVER=jabberDBServer;DATABASE=imarchive;UID=username;PWD=password`
+    - Please see notes in [Starting the tool](#starting-the-tool) to place this connection string in a local configuration file
   - I highly recommend copying a few thousand rows of the Jabber DB to your local machine for testing, and then use: `DRIVER={ODBC Driver 17 for SQL Server};SERVER=localhost\SQLEXPRESS;DATABASE=imarchive;Trusted_Connection=yes`
 - Operating system
   - This tool has only been tested on Windows 10 and MS SQL Server
@@ -35,12 +36,13 @@ A quick warning: like all access-privileged IT folks, I have the ability to read
   - The Anaconda installation for Windows had all of these packages by default
 - The toolset
   - Because I am too lazy to make a pip installer, make sure jabberArchiveTools.py and JabberSearchTool.py are in the same directory
-- Decryption keys
+- ### Decryption keys
   - If your Cisco Jabber instance has been configured for encryption, you will need to recover the AES-256 key and IV from the Cisco Unified Presence Admin portal.
   - Recovering the keys is outside of the scope of this tool.  Please consult current Cisco documentation (try searching for Instant Messaging Compliance Guide)
   - Cisco, by default, does NOT include the keys as part of the SQL Server table build which is why this tool needs the keys to "manually" decrypt the row data
   - Keys and IV are hex-encoded and look like: `key='5c48c518ae9e3fc926d00bb272a0614a993a859f25423b3b30f1ef7284bc3272'` and `iv='54b80e505c3d835e39ccce8bd6b24c01'`
   - Relax.  Those are totally randomly generated hex strings put here as an example
+  - Please see notes in [Starting the tool](#starting-the-tool) to place these values in a local configuration file
 - A little bit of patience
   - My company is pretty small and the Jabber archive database is still quite large; queries take a long time.
   - Always specify `--startTime "YYYY-MM-DD HH:MM:SS" --endTime "YYYY-MM-DD HH:MM:SS"` as soon as you know what time frame you are interested in to keep search times reduced.
@@ -48,6 +50,10 @@ A quick warning: like all access-privileged IT folks, I have the ability to read
 
 ## Starting the tool
 If you are using MS AD-integrated security on MS SQL, and the account that has been given access to the DB is not the one you use to log in to your workstation, you will need to `runas` those credentials:
+- Create a file called "jabberSearchSecrets.py" in the same folder as the main tooling.  Put these variables in there:
+  - key [See "Decryption Keys"](#decryption-keys)
+  - iv [See "Decryption Keys"](#decryption-keys)
+  - ODBC [See "DB Permissions"](#db-permissions)
 - Open a python-capable command window.  I use the Anaconda prompt.
 - `runas /env /user:ADDomain\privaccount "python JabberSearchTool.py -I -i get recipients user@domain"`
 - Make sure you specify “/env” to run out of the directory you are currently in.
@@ -81,9 +87,9 @@ The tool has a few basic searches it can do:
 ## Search Options
 - `-s time` or `--startTime time`: Times must be like 2021-02-19 17:11:00 (YYYY-MM-DD HH:MM:SS)
 - `-e time`, `--endTime time`: Times must be like 2021-02-19 17:11:00 (YYYY-MM-DD HH:MM:SS)
-- `--key key`: Hex encoded AES-256 key from Jabber settings.  Though this is "optional", you will need it if the database is encrypted
-- `--IV iv`: Hex encoded AES-256 IV from Jabber settings.  
-- `--ODBCConnectionString string`: Valid pyodbc connection string to the Jabber archive server.  This is an "optional" argument only because the version I use of this command at work has the correct one for my environment hard coded in to the tool.  JabberSearchTool will not work without this argument
+- `--key key`: Hex encoded AES-256 key from Jabber settings.  Though this is "optional", you will need it if the database is encrypted (I don't recommend using this.  See [above](#starting-the-tool))
+- `--IV iv`: Hex encoded AES-256 IV from Jabber settings.  (I don't recommend using this.  See [above](#starting-the-tool))
+- `--ODBCConnectionString string`: Valid pyodbc connection string to the Jabber archive server.    JabberSearchTool will not work without this argument. See [above](#starting-the-tool).
 - `--tableName tablename`: Table name with the Jabber archive.  “jm” is used by default
   - *Warning: This parameter can result in direct SQL injection.  If this is controlled by a non-trusted user (i.e. not you) then you must sanitize this parameter.  Don't @ me.  It turns out you can't easily parameterize table names in pyodbc*
 - `-i`, `--interactive`: If set, will open an interactive prompt to send additional commands
