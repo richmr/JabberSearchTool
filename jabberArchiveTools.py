@@ -451,7 +451,11 @@ class jabberArchiveTools:
 
         return chatlog
 
-    def makeMessageDump(self, messages, filename=False, timezone='America/Los_Angeles', timefmt="%Y-%m-%d %H:%M:%S", from_jid_index=0):
+    def makeMessageDump(self, messages, filename=False, timezone='America/Los_Angeles', timefmt="%Y-%m-%d %H:%M:%S", from_jid_index=0, mode="human"):
+        """
+        Modes: human (readable), delim (pipe delimited )
+
+        """
         new_tz = pytz.timezone(timezone)
         f = None
         if filename:
@@ -463,13 +467,18 @@ class jabberArchiveTools:
             from_jid = msg["from_jid"].split("/")[from_jid_index]
             if not msg_content:
                 msg_content = "NO DATA"
+            time_str = msg_time.strftime(timefmt)
+            to_write = f"({time_str}) {from_jid}: {msg_content}\n"
+            if mode == "delim":
+                to_write = f"{time_str}|{from_jid}|{msg_content}\n"
             if f is not None:
-                f.write("({}) {}: {}\n".format(msg_time.strftime(timefmt), from_jid, msg_content))
+                f.write(to_write)
             else:
-                print("({}) {}: {}".format(msg_time.strftime(timefmt), from_jid, msg_content))
+                print(to_write)
 
         if f:
             f.close()
+
 
 
     def makeChatroomDump(self, messages, filename=False, timezone='America/Los_Angeles', timefmt="%Y-%m-%d %H:%M:%S"):

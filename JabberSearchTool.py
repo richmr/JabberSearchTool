@@ -10,11 +10,13 @@ logger.addHandler(ch)
 import argparse
 import pyodbc
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
+import time
 import pytz
 from dateutil.tz import tz
 import shlex
 import sys
+import traceback
 
 from jabberArchiveTools import jabberArchiveTools
 from jabberSearchSecrets import key, IV, ODBC
@@ -56,15 +58,25 @@ description += 'Please use -h to see help!\n'
 
 parser = argparse.ArgumentParser(description=description, formatter_class=argparse.RawTextHelpFormatter)
 
-parser.add_argument("-s", "--startTime", type=str, default=None, nargs='+', help="Times must be like 2021-02-19T17:11:00 (YYYY-MM-DDTHH:MM:SS)")
-parser.add_argument("-e", "--endTime", type=str,  default=None, nargs='+', help="Times must be like 2021-02-19T17:11:00 (YYYY-MM-DDTHH:MM:SS)")
+# Set default start and end times (1 month of logs)
+default_endtime = datetime.now()
+prior_month = default_endtime.month - 1
+prior_year = default_endtime.year
+if prior_month < 1:
+    prior_month = 12
+    prior_year -= 1
+default_starttime = datetime(year=prior_year, month=prior_month, day=default_endtime.day, hour=default_endtime.hour, minute=default_endtime.minute)
+
+parser.add_argument("-s", "--startTime", type=str, default=[default_starttime.strftime("%Y-%m-%dT%H:%M:%S")], nargs='+', help="Times must be like 2021-02-19T17:11:00 (YYYY-MM-DDTHH:MM:SS)")
+parser.add_argument("-e", "--endTime", type=str,  default=[default_endtime.strftime("%Y-%m-%dT%H:%M:%S")],
+                    nargs='+', help="Times must be like 2021-02-19T17:11:00 (YYYY-MM-DDTHH:MM:SS)")
 parser.add_argument("--key", type=str, default=defaultKey, help="Hex encoded AES-256 key from Jabber settings")
 parser.add_argument("--IV", type=str, default=defaultIV, help="Hex encoded AES-256 IV from Jabber settings")
 parser.add_argument("--ODBCConnectionString", type=str, default=defaultODBC, help="Valid pyodbc connection string to Jabber archive server")
 parser.add_argument("--tableName", type=str, default="jm", help="Table name with the Jabber archive")
 parser.add_argument("-i", "--interactive", action='store_true', help="If set, will open an interactive prompt to send additional commands")
 parser.add_argument("-t", "--timezone", type=str, default=defaultTimeZone, help="Set to valid pytz timezone to display message times in the chosen time zone")
-parser.add_argument("-o", "--outputType", type=str, default="text", choices=["text","html"], help="Output type for chat log files (if no --outputFilename is specified, will print to stdout in text)")
+parser.add_argument("-o", "--outputType", type=str, default="text", choices=["text","html", "delim"], help="Output type for chat log files (if no --outputFilename is specified, will print to stdout in text)")
 parser.add_argument("-O", "--outputFilename", type=str, help="Filename to store the chosen chat logs")
 parser.add_argument("--noPause", action="store_true", help="If set, this tool will immediately exit on completion")
 parser.add_argument("--row_warning_threshold", type=int, default=500, help="This is the result size threshold, anything over this will trigger a warning to narrow search parameters (or set --ignore_row_warning)")
@@ -156,6 +168,8 @@ def getConversation(re_object, jabberSearchInstance):
         if args.outputFilename:
             if args.outputType == "text":
                 jabberSearchInstance.makeMessageDump(messages, filename=args.outputFilename, timezone=args.timezone)
+            elif args.outputType == "delim":
+                jabberSearchInstance.makeMessageDump(messages, filename=args.outputFilename, timezone=args.timezone, mode="delim")
             elif args.outputType == "html":
                 jabberSearchInstance.makeChatLogFile(messages, filename=args.outputFilename, timezone=args.timezone)
             else:
@@ -188,6 +202,9 @@ def getDiscussion(re_object, jabberSearchInstance):
         if args.outputFilename:
             if args.outputType == "text":
                 jabberSearchInstance.makeChatroomDump(messages, filename=args.outputFilename, timezone=args.timezone)
+            elif args.outputType == "delim":
+                jabberSearchInstance.makeMessageDump(
+                    messages, filename=args.outputFilename, timezone=args.timezone, from_jid_index=1, mode="delim")
             elif args.outputType == "html":
                 jabberSearchInstance.makeChatroomLogFile(messages, filename=args.outputFilename, timezone=args.timezone)
             else:
@@ -207,7 +224,7 @@ def fixTimezoneForSearchParameters(time_in):
     # needed help from: https://github.com/stub42/pytz/issues/12
     regex = re.compile("^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$")
     if not regex.match(time_in):
-        raise SyntaxError("Times must be like 2021-02-19T17:11:00 (YYYY-MM-DDTHH:MM:SS)")
+        raise SyntaxError(f"Times must be like 2021-02-19T17:11:00 (YYYY-MM-DDTHH:MM:SS) but got {time_in}")
     time_fmt_str = "%Y-%m-%dT%H:%M:%S"
     time_in_dt = datetime.strptime(time_in, time_fmt_str)
     orig_tz = tz.gettz(args.timezone) #pytz.timezone(atz)
@@ -290,6 +307,8 @@ try:
 
 except Exception as badnews:
     #raise badnews
+    tracemsg = traceback.format_exc()
     print("Unable to complete search: {}".format(badnews))
+    print(tracemsg)
     if not args.noPause:
         wait = input("Press enter to exit")
