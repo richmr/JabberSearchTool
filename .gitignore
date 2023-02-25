@@ -152,3 +152,4 @@ cython_debug/
 #.idea/
 jabberSearchSecrets.py
 pscmonthly.bat
+pscmonthly_sqlcred.bat

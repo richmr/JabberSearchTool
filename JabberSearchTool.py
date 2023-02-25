@@ -47,55 +47,7 @@ Options
     --row_warning_threshold
 """
 
-defaultODBC = ODBC
-defaultKey = key
-defaultIV = IV
-defaultTimeZone = 'America/Los_Angeles'
 
-description = 'JabberSearchTool V0.2\n'
-description += 'Michael Rich - Feb 2023\n'
-description += 'Please use -h to see help!\n'
-
-parser = argparse.ArgumentParser(description=description, formatter_class=argparse.RawTextHelpFormatter)
-
-# Set default start and end times (1 month of logs)
-default_endtime = datetime.now()
-prior_month = default_endtime.month - 1
-prior_year = default_endtime.year
-if prior_month < 1:
-    prior_month = 12
-    prior_year -= 1
-default_starttime = datetime(year=prior_year, month=prior_month, day=default_endtime.day, hour=default_endtime.hour, minute=default_endtime.minute)
-
-parser.add_argument("-s", "--startTime", type=str, default=[default_starttime.strftime("%Y-%m-%dT%H:%M:%S")], nargs='+', help="Times must be like 2021-02-19T17:11:00 (YYYY-MM-DDTHH:MM:SS)")
-parser.add_argument("-e", "--endTime", type=str,  default=[default_endtime.strftime("%Y-%m-%dT%H:%M:%S")],
-                    nargs='+', help="Times must be like 2021-02-19T17:11:00 (YYYY-MM-DDTHH:MM:SS)")
-parser.add_argument("--key", type=str, default=defaultKey, help="Hex encoded AES-256 key from Jabber settings")
-parser.add_argument("--IV", type=str, default=defaultIV, help="Hex encoded AES-256 IV from Jabber settings")
-parser.add_argument("--ODBCConnectionString", type=str, default=defaultODBC, help="Valid pyodbc connection string to Jabber archive server")
-parser.add_argument("--tableName", type=str, default="jm", help="Table name with the Jabber archive")
-parser.add_argument("-i", "--interactive", action='store_true', help="If set, will open an interactive prompt to send additional commands")
-parser.add_argument("-t", "--timezone", type=str, default=defaultTimeZone, help="Set to valid pytz timezone to display message times in the chosen time zone")
-parser.add_argument("-o", "--outputType", type=str, default="text", choices=["text","html", "delim"], help="Output type for chat log files (if no --outputFilename is specified, will print to stdout in text)")
-parser.add_argument("-O", "--outputFilename", type=str, help="Filename to store the chosen chat logs")
-parser.add_argument("--noPause", action="store_true", help="If set, this tool will immediately exit on completion")
-parser.add_argument("--row_warning_threshold", type=int, default=500, help="This is the result size threshold, anything over this will trigger a warning to narrow search parameters (or set --ignore_row_warning)")
-parser.add_argument("-I", "--ignore_row_warning", action="store_true", help="If set, this will generate results regardless of how large the result set is")
-
-command_help = "Available command options are:\n"
-command_help += "show users - Get a list of all valid users in archive\n"
-command_help += "show chatrooms - Get a list of all group chat rooms in the archive\n"
-command_help += "get recipients [username or chatroom] - Get a list of the recipients a user sent to, or all users in a chatroom\n"
-command_help += "get chatrooms [username or user1,user2,..] - Get a list of chatrooms for this user.  If multiple users are given (separated by a comma), then will list the rooms where these users were active together\n"
-command_help += "get conversation [user1 user2] - Generates the conversation between these two users.  If no --outputFilename, prints to screen.  If --outputFilename then outputs to file name\n"
-command_help += "get discussion [chatroom] - Generates the group discussion in this chatroom.  If no --outputFilename, prints to screen.  If --outputFilename then outputs to file name\n"
-command_help += "exit - Closes this Jabber archive search session\n"
-command_help += "In interactive mode, you can also specify options -s,-e,-t,-o,-O, and -I\n"
-
-parser.add_argument("command", nargs="+", help=command_help)
-
-# initial argument parse
-args = parser.parse_args()
 
 def showUsers(re_object, jabberSearchInstance):
     allusers = jabberSearchInstance.getAllUserNames()
@@ -252,63 +204,128 @@ commandRe_dictionary = {
                         "get discussion (.+)":getDiscussion
                         }
 
-try:
-    # start DB connection
-    if not args.ODBCConnectionString:
-        sys.exit("Please provide a valid ODBC connection string with --ODBCConnectionString")
+if __name__ == "__main__":
+    defaultODBC = ODBC
+    defaultKey = key
+    defaultIV = IV
+    defaultTimeZone = 'America/Los_Angeles'
 
-    cnxn = pyodbc.connect(args.ODBCConnectionString)
-    # Start jabs session
-    jabberConfig = {
-                    "pyodbc_connection":cnxn,
-                    "table":args.tableName,
-                    "AES_key_hex":args.key,
-                    "AES_IV_hex":args.IV,
-                    "row_count_alert_threshold":args.row_warning_threshold,
-                    }
-    jabs = jabberArchiveTools(**jabberConfig)
+    description = 'JabberSearchTool V0.2\n'
+    description += 'Michael Rich - Feb 2023\n'
+    description += 'Please use -h to see help!\n'
 
-    # begin the loop
-    while True:
-        nextcommand = ""
-        commandString = [str(i) for i in args.command]
-        commandString = " ".join(commandString)
-        print("Processing command {}".format(commandString))
+    parser = argparse.ArgumentParser(
+        description=description, formatter_class=argparse.RawTextHelpFormatter, prog="JabberSearchTool")
 
-        if args.command[0] == "exit":
-            break
-        if not routeCommand(commandString, commandRe_dictionary, jabs):
-            print("Unrecognized command '{}'".format(commandString))
-            print(command_help)
-        if args.interactive:
-            existingOptions = ["-i"]
-            if args.startTime is not None:
-                existingOptions.append(f"-s{args.startTime[-1]}")
-            if args.endTime is not None:
-                existingOptions.append(f"-e{args.endTime[-1]}")
-            if args.ignore_row_warning:
-                existingOptions.append("-I")
+    # Set default start and end times (1 month of logs)
+    default_endtime = datetime.now()
+    prior_month = default_endtime.month - 1
+    prior_year = default_endtime.year
+    if prior_month < 1:
+        prior_month = 12
+        prior_year -= 1
+    default_starttime = datetime(year=prior_year, month=prior_month, day=default_endtime.day,
+                                hour=default_endtime.hour, minute=default_endtime.minute)
+
+    parser.add_argument("-s", "--startTime", type=str, default=[default_starttime.strftime(
+        "%Y-%m-%dT%H:%M:%S")], nargs='+', help="Times must be like 2021-02-19T17:11:00 (YYYY-MM-DDTHH:MM:SS)")
+    parser.add_argument("-e", "--endTime", type=str,  default=[default_endtime.strftime("%Y-%m-%dT%H:%M:%S")],
+                        nargs='+', help="Times must be like 2021-02-19T17:11:00 (YYYY-MM-DDTHH:MM:SS)")
+    parser.add_argument("--key", type=str, default=defaultKey,
+                        help="Hex encoded AES-256 key from Jabber settings")
+    parser.add_argument("--IV", type=str, default=defaultIV,
+                        help="Hex encoded AES-256 IV from Jabber settings")
+    parser.add_argument("--ODBCConnectionString", type=str, default=defaultODBC,
+                        help="Valid pyodbc connection string to Jabber archive server")
+    parser.add_argument("--tableName", type=str, default="jm",
+                        help="Table name with the Jabber archive")
+    parser.add_argument("-i", "--interactive", action='store_true',
+                        help="If set, will open an interactive prompt to send additional commands")
+    parser.add_argument("-t", "--timezone", type=str, default=defaultTimeZone,
+                        help="Set to valid pytz timezone to display message times in the chosen time zone")
+    parser.add_argument("-o", "--outputType", type=str, default="text", choices=[
+                        "text", "html", "delim"], help="Output type for chat log files (if no --outputFilename is specified, will print to stdout in text)")
+    parser.add_argument("-O", "--outputFilename", type=str,
+                        help="Filename to store the chosen chat logs")
+    parser.add_argument("--noPause", action="store_true",
+                        help="If set, this tool will immediately exit on completion")
+    parser.add_argument("--row_warning_threshold", type=int, default=500,
+                        help="This is the result size threshold, anything over this will trigger a warning to narrow search parameters (or set --ignore_row_warning)")
+    parser.add_argument("-I", "--ignore_row_warning", action="store_true",
+                        help="If set, this will generate results regardless of how large the result set is")
+
+    command_help = "Available command options are:\n"
+    command_help += "show users - Get a list of all valid users in archive\n"
+    command_help += "show chatrooms - Get a list of all group chat rooms in the archive\n"
+    command_help += "get recipients [username or chatroom] - Get a list of the recipients a user sent to, or all users in a chatroom\n"
+    command_help += "get chatrooms [username or user1,user2,..] - Get a list of chatrooms for this user.  If multiple users are given (separated by a comma), then will list the rooms where these users were active together\n"
+    command_help += "get conversation [user1 user2] - Generates the conversation between these two users.  If no --outputFilename, prints to screen.  If --outputFilename then outputs to file name\n"
+    command_help += "get discussion [chatroom] - Generates the group discussion in this chatroom.  If no --outputFilename, prints to screen.  If --outputFilename then outputs to file name\n"
+    command_help += "exit - Closes this Jabber archive search session\n"
+    command_help += "In interactive mode, you can also specify options -s,-e,-t,-o,-O, and -I\n"
+
+    parser.add_argument("command", nargs="+", help=command_help)
+
+    # initial argument parse
+    args = parser.parse_args()
+
+    try:
+        # start DB connection
+        if not args.ODBCConnectionString:
+            sys.exit("Please provide a valid ODBC connection string with --ODBCConnectionString")
+
+        cnxn = pyodbc.connect(args.ODBCConnectionString)
+        # Start jabs session
+        jabberConfig = {
+                        "pyodbc_connection":cnxn,
+                        "table":args.tableName,
+                        "AES_key_hex":args.key,
+                        "AES_IV_hex":args.IV,
+                        "row_count_alert_threshold":args.row_warning_threshold,
+                        }
+        jabs = jabberArchiveTools(**jabberConfig)
+
+        # begin the loop
+        while True:
             nextcommand = ""
-            print("Options active for next command: "+" ".join(existingOptions))
-            nextcommand = input("> ")
-            nextcommand_list = existingOptions
-            nextcommand_list += shlex.split(nextcommand)
-            # Need to add interactive back in
-           
-            # if args.ignore_row_warning:
-            #     nextcommand_list.append("-I")
-        elif args.noPause:
-            break
-        else:
+            commandString = [str(i) for i in args.command]
+            commandString = " ".join(commandString)
+            print("Processing command {}".format(commandString))
+
+            if args.command[0] == "exit":
+                break
+            if not routeCommand(commandString, commandRe_dictionary, jabs):
+                print("Unrecognized command '{}'".format(commandString))
+                print(command_help)
+            if args.interactive:
+                existingOptions = ["-i"]
+                if args.startTime is not None:
+                    existingOptions.append(f"-s{args.startTime[-1]}")
+                if args.endTime is not None:
+                    existingOptions.append(f"-e{args.endTime[-1]}")
+                if args.ignore_row_warning:
+                    existingOptions.append("-I")
+                nextcommand = ""
+                print("Options active for next command: "+" ".join(existingOptions))
+                nextcommand = input("> ")
+                nextcommand_list = existingOptions
+                nextcommand_list += shlex.split(nextcommand)
+                # Need to add interactive back in
+            
+                # if args.ignore_row_warning:
+                #     nextcommand_list.append("-I")
+            elif args.noPause:
+                break
+            else:
+                wait = input("Press enter to exit")
+                break
+
+            args = parser.parse_args(nextcommand_list)
+
+    except Exception as badnews:
+        #raise badnews
+        tracemsg = traceback.format_exc()
+        print("Unable to complete search: {}".format(badnews))
+        print(tracemsg)
+        if not args.noPause:
             wait = input("Press enter to exit")
-            break
-
-        args = parser.parse_args(nextcommand_list)
-
-except Exception as badnews:
-    #raise badnews
-    tracemsg = traceback.format_exc()
-    print("Unable to complete search: {}".format(badnews))
-    print(tracemsg)
-    if not args.noPause:
-        wait = input("Press enter to exit")
