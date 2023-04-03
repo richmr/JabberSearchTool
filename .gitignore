@@ -153,3 +153,5 @@ cython_debug/
 jabberSearchSecrets.py
 pscmonthly.bat
 pscmonthly_sqlcred.bat
+pscreport.bat
+MPIChatRooms.txt

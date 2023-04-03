@@ -464,7 +464,16 @@ class jabberArchiveTools:
         for msg in messages:
             msg_time = datetime.fromtimestamp(msg["sent_date"].timestamp(), tz=new_tz)
             msg_content = msg["body_string"]
-            from_jid = msg["from_jid"].split("/")[from_jid_index]
+            from_jid = "NOT_FOUND"
+            try:
+                fjs = msg["from_jid"].split("/")
+                if len(fjs) > from_jid_index:
+                    from_jid = fjs[from_jid_index]
+                else:
+                    from_jid = fjs[0]
+            except Exception as badnews:
+                # Just pass for now
+                pass
             if not msg_content:
                 msg_content = "NO DATA"
             time_str = msg_time.strftime(timefmt)
